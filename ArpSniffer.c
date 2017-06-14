@@ -11,27 +11,20 @@
 #define BUFFER_SIZE 1600
 #define ETHERTYPE 0x0806
 
+
+
+
+
+
+
 int main(int argc, char *argv[])
 {
 	
-	 struct arp
-    {
-      short int hw_type;
-      short int pro_type;
-      char hlen;
-      char plen;
-      short int operation;
-      unsigned char sender_ha [6];
-      unsigned char sender_ip [4] 
-      unsigned char target_ha [6];
-      unsigned char target_ip[4];  
-    };
 	
-	int fd;
+    int fd;
 	unsigned char buffer[BUFFER_SIZE];
 	unsigned char *data;
 	struct ifreq ifr;
-	struct arp arp_dados;
 	char ifname[IFNAMSIZ];
 
 	if (argc != 2) {
@@ -69,10 +62,22 @@ int main(int argc, char *argv[])
 
 	printf("Esperando pacotes ... \n");
 	while (1) {
+
+        unsigned short int hw_type;
+        unsigned short int pro_type;
+        char hlen;
+        char plen;
+        short int operation;
+        unsigned char sender_ha [6];
+        unsigned char sender_ip [4]; 
+        unsigned char target_ha [6];
+        unsigned char target_ip[4];  
+
+
 		unsigned char mac_dst[6];
 		unsigned char mac_src[6];
 		short int ethertype;
-		int distancia;
+
 
 		/* Recebe pacotes */
 		if (recv(fd,(char *) &buffer, BUFFER_SIZE, 0) < 0) {
@@ -89,39 +94,39 @@ int main(int argc, char *argv[])
 		
 		/* Copia o conteudo do cabecalho ARP */
 		
-		distancia = buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype);
-		
-		memcpy(&arp_dados.hw_type, distancia, sizeof(arp_dados.hw_type));
-		arp_dados.hw_type = ntohs(arp_dados.hw_type);
 
-		distancia = distancia + sizeof(arp_dados.hw_type);
-		memcpy(&arp_dados.pro_type, distancia, sizeof(arp_dados.pro_type));
-		arp_dados.pro_type = ntohs(arp_dados.pro_type);
 		
-		distancia = distancia + sizeof(arp_dados.pro_type);
-		memcpy(arp_dados.hlen, distancia, sizeof(arp_dados.hlen));
-		
-		distancia = distancia + sizeof(arp_dados.hlen);
-		memcpy(arp_dados.plen, distancia, sizeof(arp_dados.plen));
-		
-		distancia = distancia + sizeof(arp_dados.plen);
-		memcpy(&arp_dados.operation, distancia, sizeof(arp_dados.operation));
-		arp_dados.operation = ntohs(arp_dados.operation);
+		memcpy(&hw_type, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype), sizeof(hw_type));
+		hw_type = ntohs(hw_type);
 
-		distancia = distancia + sizeof(arp_dados.operation);
-		memcpy(arp_dados.sender_ha, distancia, sizeof(arp_dados.sender_ha));
+
+		memcpy(&pro_type, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type), sizeof(pro_type));
+		pro_type = ntohs(pro_type);
 		
-		distancia = distancia + sizeof(arp_dados.sender_ha);
-		memcpy(arp_dados.sender_ip, distancia, sizeof(arp_dados.sender_ip));
+
+		memcpy(&hlen, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type), sizeof(hlen));
 		
-		distancia = distancia + sizeof(arp_dados.sender_ip);
-		memcpy(arp_dados.target_ha, distancia, sizeof(arp_dados.target_ha));
+
+		memcpy(&plen, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen), sizeof(plen));
 		
-		distancia = distancia + sizeof(arp_dados.target_ha);
-		memcpy(arp_dados.target_ip, distancia, sizeof(arp_dados.target_ip));
+
+		memcpy(&operation, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen), sizeof(operation));
+		operation = ntohs(operation);
+
+
+		memcpy(sender_ha, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen)+ sizeof(operation), sizeof(sender_ha));
 		
-		distancia = distancia + sizeof(arp_dados.target_ip);
-		data = (distancia);
+
+		memcpy(sender_ip, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen)+ sizeof(operation)+ sizeof(sender_ha), sizeof(sender_ip));
+		
+
+		memcpy(target_ha, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen)+ sizeof(operation)+ sizeof(sender_ha)+ sizeof(sender_ip), sizeof(target_ha));
+		
+
+		memcpy(target_ip, buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen)+ sizeof(operation)+ sizeof(sender_ha)+ sizeof(sender_ip)+ sizeof(target_ha), sizeof(target_ip));
+		
+
+		data = (buffer+sizeof(mac_dst)+sizeof(mac_src)+sizeof(ethertype)+ sizeof(hw_type)+ sizeof(pro_type)+ sizeof(hlen)+ sizeof(plen)+ sizeof(operation)+ sizeof(sender_ha)+ sizeof(sender_ip)+ sizeof(target_ha)+ sizeof(target_ip));
 
 		if (ethertype == ETHERTYPE) {
 			printf("MAC destino: %02x:%02x:%02x:%02x:%02x:%02x\n", 
@@ -132,19 +137,19 @@ int main(int argc, char *argv[])
 			
 			printf("CABEÇALHO ARP");
 			
-			printf("Hardware Type: %d", arp_dados.hw_type);
-			printf("Protocol Type: %d", arp_dados.pro_type);
-			printf("HLEN: %c", arp_dados.hlen);
-			printf("PLEN: %c", arp_dados.plen);
-			printf("Operation: %d", arp_dados.operation);
+			printf("Hardware Type: %04x", ntohs(hw_type));
+			printf("Protocol Type: %04x", ntohs(pro_type));
+			printf("HLEN: %02x", hlen);
+			printf("PLEN: %02x", plen);
+			printf("Operation: %04x", operation);
 			printf("Hardware Sender: %02x:%02x:%02x:%02x:%02x:%02x\n",
-			arp_dados.sender_ha[0], arp_dados.sender_ha[1], arp_dados.sender_ha[2], arp_dados.sender_ha[3], arp_dados.sender_ha[4], arp_dados.sender_ha[5]);
-			printf("IP Sender:  %02x:%02x:%02x:%02x",
-			arp_dados.sender_ip[0], arp_dados.sender_ip[1], arp_dados.sender_ip[2], arp_dados.sender_ip[3],);
+			sender_ha[0], sender_ha[1], sender_ha[2], sender_ha[3], sender_ha[4], sender_ha[5]);
+			printf("IP Sender:  %d.%d.%d.%d",
+			sender_ip[0], sender_ip[1], sender_ip[2], sender_ip[3]);
 			printf("Hardware Target: %02x:%02x:%02x:%02x:%02x:%02x\n", 
-			arp_dados.target_ha[0], arp_dados.target_ha[1],arp_dados.target_ha[2],arp_dados.target_ha[3],arp_dados.target_ha[4],arp_dados.target_ha[5]);
-			printf("IP Target:  %02x:%02x:%02x:%02x",
-			arp_dados.target_ip[0], arp_dados.target_ip[1], arp_dados.target_ip[2], arp_dados.target_ip[3],);
+			target_ha[0], target_ha[1],target_ha[2],target_ha[3],target_ha[4],target_ha[5]);
+			printf("IP Target:  %d:%d:%d:%d",
+			target_ip[0], target_ip[1], target_ip[2], target_ip[3]);
 			
 			printf("Dado: %s\n", data);
 			printf("\n");
